@@ -30,55 +30,34 @@
     <script>
         navigator.bluetooth.requestDevice({
             filters: [{
-                services: ['heart_rate'],
+                services: [0x180D],
             }]
             }).then(device => device.gatt.connect())
-            .then(server => server.getPrimaryService('heart_rate'))
+            .then(server => server.getPrimaryService(0x180D))
             .then(service => {
             chosenHeartRateService = service;
             return Promise.all([
-                service.getCharacteristic('body_sensor_location')
-                .then(handleBodySensorLocationCharacteristic),
-                service.getCharacteristic('heart_rate_measurement')
+                service.getCharacteristic(0x2A37)
                 .then(handleHeartRateMeasurementCharacteristic),
             ]);
             });
 
-            function handleBodySensorLocationCharacteristic(characteristic) {
-                if (characteristic === null) {
-                    console.log("Unknown sensor location.");
-                    return Promise.resolve();
-                }
-                return characteristic.readValue()
-                .then(sensorLocationData => {
-                    let sensorLocation = sensorLocationData.getUint8(0);
-                    switch (sensorLocation) {
-                    case 0: return 'Other';
-                    case 1: return 'Chest';
-                    case 2: return 'Wrist';
-                    case 3: return 'Finger';
-                    case 4: return 'Hand';
-                    case 5: return 'Ear Lobe';
-                    case 6: return 'Foot';
-                    default: return 'Unknown';
-                    }
-                }).then(location => console.log(location));
-                }
+    
 
-                function handleHeartRateMeasurementCharacteristic(characteristic) {
+            function handleHeartRateMeasurementCharacteristic(characteristic) {
                 return characteristic.startNotifications()
                 .then(char => {
                     characteristic.addEventListener('characteristicvaluechanged',
                                                     onHeartRateChanged);
                 });
-                }
+            }
 
-                function onHeartRateChanged(event) {
+            function onHeartRateChanged(event) {
                 let characteristic = event.target;
                 console.log(parseHeartRate(characteristic.value));
-                }
+            }
 
-                function parseHeartRate(data) {
+            function parseHeartRate(data) {
                     let flags = data.getUint8(0);
                     let rate16Bits = flags & 0x1;
                     let result = {};
@@ -109,10 +88,10 @@
                         result.rrIntervals = rrIntervals;
                     }
                     return result;
-                    }
+            }
 
 
-                    function resetEnergyExpended() {
+            function resetEnergyExpended() {
                         if (!chosenHeartRateService) {
                             return Promise.reject(new Error('No heart rate sensor selected yet.'));
                         }
@@ -121,7 +100,7 @@
                             let resetEnergyExpended = new Uint8Array([1]);
                             return controlPoint.writeValue(resetEnergyExpended);
                         });
-                    }
+            }
     </script>
   </body>
 </html>
